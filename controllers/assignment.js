@@ -40,14 +40,17 @@ const createNewAssignment = async (req, res) => {
     !req.body.num_of_attemps ||
     !req.body.deadline
   ) {
-    console.log('Invalid input');
     return res.status(400).json({
       message: 'Bad request-Required Assignment body Parameters are missing',
     });
   }
 
   try {
+    let { userName } = getDecryptedCreds(req.headers.authorization);
+
+    let idValue = await validUserId(userName);
     //Change string to Date
+
     const deadlineDate = new Date(req.body.deadline);
 
     const today = new Date();
