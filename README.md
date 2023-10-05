@@ -1,6 +1,8 @@
 # webapp
 
-CSYE6225 - webapp - PRAMOD BEGUR NAGARAJ
+CSYE6225 - webapp - 
+Name: PRAMOD BEGUR NAGARAJ
+NUID: 002708842
 
 Description: HealthZApplication
 Checks the health of Database Server
