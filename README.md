@@ -1,6 +1,6 @@
 # webapp
 
-CSYE6225 - webapp - 
+CSYE6225 - webap - 
 Name: PRAMOD BEGUR NAGARAJ
 NUID: 002708842
 
