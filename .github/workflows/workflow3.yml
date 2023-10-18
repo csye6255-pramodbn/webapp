@@ -4,6 +4,7 @@ on:
   pull_request:
     types:
       - closed
+
   workflow_dispatch:
 
 concurrency:
@@ -11,12 +12,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   integration_test:
     name: integration_test
     if: ${{ github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:latest
@@ -52,22 +51,21 @@ jobs:
       - run: npm test
 
   build_packer_ami:
-    name: build_packer_ami
     if: ${{ github.event.pull_request.merged == true }}
+    needs: integration_test
+    name: build_packer_ami
     runs-on: ubuntu-latest
     outputs:
       ami_id: ${{ steps.packer_build.outputs.AMI_ID }}
-
+      
     steps:
       - run: echo ${{ github.event.pull_request.merged }}
       - uses: actions/checkout@v2
 
-      - name: Zip the project
+      - name: zip the project
         run: |
-          cd ../
-          zip -r webapp.zip webapp
-          cd -
-          cp ../webapp.zip .
+          cd ../ && zip -r webapp.zip webapp
+          cd - && cp ../webapp.zip .
 
       - name: Check zip
         run: ls -l
@@ -77,7 +75,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Setup 'packer'
         uses: hashicorp/setup-packer@main
