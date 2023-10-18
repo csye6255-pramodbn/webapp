@@ -1,0 +1,53 @@
+name: Test Packer Format and Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  packer_format_and_validation:
+    name: Packer Format and Validation Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Zip the project & copy to repo
+        run: |
+          cd ../
+          zip -r webapp.zip webapp
+          cd -
+          cp ../webapp.zip .
+
+      - name: Check zip
+        run: ls -l
+
+      - name: Install Packer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y packer
+
+      - name: Packer Init
+        run: packer init ami.pkr.hcl
+
+      - name: Packer Format
+        run: |
+          if packer fmt -check -diff ami.pkr.hcl; then
+            echo "Packer format check passed."
+          else
+            echo "Packer format check failed. Run 'packer fmt' to fix."
+            exit 1
+          fi
+
+      - name: Validate Packer Template
+        run: |
+          if packer validate ami.pkr.hcl; then
+            echo "Packer validation check passed."
+          else
+            echo "Packer validation check failed."
+            exit 1
+          fi
