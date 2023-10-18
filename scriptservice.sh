@@ -28,6 +28,10 @@ sudo -u postgres createdb db1
 echo_info "INSTALLING-UNZIP"
 sudo apt install -y unzip
 
+# Uninstalling git
+sudo apt-get remove --purge -y git
+
+
 cd /opt
 unzip webapp.zip
 rm webapp.zip
