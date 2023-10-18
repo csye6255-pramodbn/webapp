@@ -109,6 +109,6 @@ build {
     ]
     scripts = [
       "scriptservice.sh"
-                   ]
+    ]
   }
 }

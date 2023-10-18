@@ -1,0 +1,96 @@
+name: Integration & AMI-Build
+
+on:
+  pull_request:
+    types:
+      - closed
+  workflow_dispatch:
+
+concurrency:
+  group: PRMerge
+  cancel-in-progress: true
+
+jobs:
+
+  integration_test:
+    name: integration_test
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: ${{ secrets.DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.DB_NAME }}
+        ports:
+          - 5432:5432
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    env:
+      PORT: ${{ secrets.PORT }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_DIALECT: ${{ secrets.DB_DIALECT }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v1
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: npm install
+      - run: npm test
+
+  build_packer_ami:
+    if: ${{ github.event.pull_request.merged == true }}
+    name: build_packer_ami
+    runs-on: ubuntu-latest
+    outputs:
+      ami_id: ${{ steps.packer_build.outputs.AMI_ID }}
+
+    steps:
+      - run: echo ${{ github.event.pull_request.merged }}
+      - uses: actions/checkout@v2
+
+      - name: Zip the project
+        run: |
+          cd ../
+          zip -r webapp.zip webapp
+          cd -
+          cp ../webapp.zip .
+
+      - name: Check zip
+        run: ls -l
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup 'packer'
+        uses: hashicorp/setup-packer@main
+        id: setup
+        with:
+          version: '1.8.3'
+
+      - name: Run 'packer init'
+        id: init
+        run: packer init ami.pkr.hcl
+
+      - name: Run 'packer Build'
+        id: packer_build
+        run: |
+          echo "Running packer build"
+          packer build ami.pkr.hcl
