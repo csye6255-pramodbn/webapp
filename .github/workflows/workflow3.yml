@@ -52,8 +52,8 @@ jobs:
       - run: npm test
 
   build_packer_ami:
-    if: ${{ github.event.pull_request.merged == true }}
     name: build_packer_ami
+    if: ${{ github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     outputs:
       ami_id: ${{ steps.packer_build.outputs.AMI_ID }}
