@@ -107,9 +107,7 @@ const getAssignment = async (req, res) => {
     console.log('Checks passed');
     const existingAssignment = await Assignment.findByPk(id);
     if (!existingAssignment) {
-      return res.status(400).json({
-        message: 'Bad Request-Assignment not found',
-      });
+       return res.status(200).json({});
     }
     let result = {
       id: existingAssignment.dataValues.id,
@@ -146,9 +144,7 @@ const getAllAssignments = async (req, res) => {
     let data = await Assignment.findAll();
 
     if (!data || data.length === 0) {
-      return res.status(404).json({
-        message: 'Assignments Not Found',
-      });
+      return res.status(200).json({});
     }
     let results = data.map((item) => ({
       id: item.dataValues.id,
