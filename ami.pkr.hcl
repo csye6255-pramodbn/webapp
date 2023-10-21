@@ -78,9 +78,7 @@ source "amazon-ebs" "webapp" {
     device_name           = "/dev/xvda"
     volume_size           = 8
     volume_type           = "gp2"
-  }
-
-}
+##
 
 
 build {
