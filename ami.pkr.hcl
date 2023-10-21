@@ -48,7 +48,7 @@ variable "ami_regions" {
   type        = list(string)
   default     = ["us-east-1"]
   description = "Regions where AMI should be copied"
-}
+                                     }
 
 
 # https://www.packer.io/plugins/builders/amazon/ebs
