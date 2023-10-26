@@ -50,13 +50,18 @@ variable "ami_regions" {
   description = "Regions where AMI should be copied"
 }
 
+variable "ami_users" {
+  type        = list(string)
+  default     = ["605235953341", "201635325056"]
+  description = "AMIS will be shared to Dev and Demo account"
+}
 
 # https://www.packer.io/plugins/builders/amazon/ebs
 source "amazon-ebs" "webapp" {
   ami_name              = "csye6225_${formatdate("YYYY_MM_DD_hh_mm_ss", timestamp())}"
   ami_description       = "AMI for CSYE 6225"
   region                = "${var.region}"
-  ami_users             = ["605235953341", "201635325056"]
+  ami_users             = "${var.ami_users}"
   force_deregister      = true
   force_delete_snapshot = true
   ami_regions           = "${var.ami_regions}"
@@ -86,20 +91,9 @@ source "amazon-ebs" "webapp" {
 build {
   sources = ["source.amazon-ebs.webapp"]
 
-
-  provisioner "shell" {
-    environment_vars = [
-      "CHECKPOINT_DISABLE=1",
-      "DEBIAN_FRONTEND=noninteractive"
-    ]
-    inline = [
-      "sudo chown -R admin:admin /opt"
-    ]
-  }
-
   provisioner "file" {
     source      = "webapp.zip"
-    destination = "/opt/"
+    destination = "/home/admin/webapp.zip"
   }
 
   provisioner "shell" {

@@ -8,49 +8,54 @@ echo_info () {
 echo_info "UPDATES-BEING-INSTALLED"
 sudo apt update && sudo apt upgrade -y
 
-source ~/.bashrc
 
 # Installing node server
 echo_info "INSTALLING-NODEJS"
 sudo apt install -y nodejs npm
-
-# Installing PostgresSQL
-echo_info "INSTALLING-POSTGRESQL"
-sudo apt install -y postgresql postgresql-contrib
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-sudo systemctl status postgresql
-sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'pramod';"
-sudo -u postgres createdb db1
 
 
 # Installing unzip
 echo_info "INSTALLING-UNZIP"
 sudo apt install -y unzip
 
+
 # Uninstalling git
 sudo apt-get remove --purge -y git
 
 
-cd /opt
-unzip webapp.zip
-rm webapp.zip
-cd webapp
-mv users.csv /opt/
-npm i
+# Creating new user and giving ownership to the webapp directory
+sudo groupadd pramodgroup
+sudo useradd -s /bin/false -g pramodgroup -d /opt/pramodhome -m pramod
+sudo chmod -R 755 /opt/pramodhome/webapp
 
+
+# Moving weapp.zip to /opt/pramodhome and installing node modules
+sudo mv /home/admin/webapp.zip /opt/pramodhome/
+cd /opt/pramodhome
+sudo unzip webapp.zip
+sudo rm webapp.zip
+sudo mv /opt/pramodhome/webapp/users.csv /opt/
+cd /opt/pramodhome/webapp
+sudo npm i
+
+
+# Starting the service
 sudo sh -c "echo '[Unit]
 Description=My NPM Service
-After=network.target
+Requires=cloud-init.target
+After=cloud-final.service
 
 [Service]
-User=admin
-WorkingDirectory=/opt/webapp
+EnvironmentFile=/etc/environment
+Type=simple
+User=pramod
+WorkingDirectory=/opt/pramodhome/webapp
 ExecStart=/usr/bin/npm run start
 Restart=always
+RestartSec=10
 
 [Install]
-WantedBy=multi-user.target' | sudo tee /etc/systemd/system/webapp.service"
+WantedBy=cloud-init.target' | sudo tee /etc/systemd/system/webapp.service"
 
 sudo systemctl daemon-reload
 sudo systemctl enable webapp
