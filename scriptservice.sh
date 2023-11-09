@@ -5,59 +5,68 @@ echo_info () {
 }
 
 # Updating packages
-echo_info "UPDATES-BEING-INSTALLED"
 sudo apt update && sudo apt upgrade -y
 
-
 # Installing node server
-echo_info "INSTALLING-NODEJS"
 sudo apt install -y nodejs npm
 
-
 # Installing unzip
-echo_info "INSTALLING-UNZIP"
 sudo apt install -y unzip
-
 
 # Uninstalling git
 sudo apt-get remove --purge -y git
 
+# Installing PostgreSQL Client
+sudo apt install postgresql-client -y
+
+# Installing dig
+sudo apt install dnsutils -y
+
+# Cloudwatch agent installation and configuration
+sudo wget https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb
+sudo dpkg -i ./amazon-cloudwatch-agent.deb 
+sudo apt-get -f install
+sudo mv /home/admin/cloudwatch-config.json /opt/cloudwatch-config.json
 
 # Creating new user and giving ownership to the webapp directory
 sudo groupadd pramodgroup
 sudo useradd -s /bin/false -g pramodgroup -d /opt/pramodhome -m pramod
-sudo chmod -R 755 /opt/pramodhome/webapp
-
+sudo chown -R pramod:pramodgroup /opt/pramodhome/
+sudo chmod -R 775 /opt/pramodhome/
+sudo chmod g+s /opt/pramodhome/
 
 # Moving weapp.zip to /opt/pramodhome and installing node modules
 sudo mv /home/admin/webapp.zip /opt/pramodhome/
-cd /opt/pramodhome
+cd /opt/pramodhome/
 sudo unzip webapp.zip
 sudo rm webapp.zip
+
+# Creating log file
+sudo mkdir /var/log/webapp
+sudo touch /var/log/webapp/csye6225.log
+sudo chown -R pramod:pramodgroup /var/log/webapp
+sudo chmod 750 /var/log/webapp/csye6225.log
+
+# Installing node modules
 sudo mv /opt/pramodhome/webapp/users.csv /opt/
 cd /opt/pramodhome/webapp
 sudo npm i
 
+# Systemd
+sudo cp /home/admin/webapp.service /etc/systemd/system/
+
+# Final permission changes
+sudo chown pramod:pramodgroup /etc/systemd/system/webapp.service
+sudo chmod 750 /etc/systemd/system/webapp.service
+sudo chown -R pramod:pramodgroup /opt/pramodhome/
+sudo chmod -R 750 /opt/pramodhome/webapp
 
 # Starting the service
-sudo sh -c "echo '[Unit]
-Description=My NPM Service
-Requires=cloud-init.target
-After=cloud-final.service
-
-[Service]
-EnvironmentFile=/etc/environment
-Type=simple
-User=pramod
-WorkingDirectory=/opt/pramodhome/webapp
-ExecStart=/usr/bin/npm run start
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=cloud-init.target' | sudo tee /etc/systemd/system/webapp.service"
-
 sudo systemctl daemon-reload
 sudo systemctl enable webapp
 sudo systemctl start webapp
 sudo systemctl status webapp
+
+# Installing rsyslog for audit logs
+sudo apt install -y rsyslog
+sudo systemctl daemon-reload
