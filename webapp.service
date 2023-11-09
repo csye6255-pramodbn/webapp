@@ -1,0 +1,16 @@
+[Unit]
+Description=My NPM Service
+Requires=cloud-init.target
+After=cloud-final.service
+
+[Service]
+EnvironmentFile=/etc/environment
+Type=simple
+User=pramod
+WorkingDirectory=/opt/pramodhome/webapp
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=cloud-init.target

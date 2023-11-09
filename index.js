@@ -8,6 +8,7 @@ const bootStrap = require('./utils/bootstrap');
 const parseAndInsertCSV = require('./utils/parsecsv-insert');
 const assignment = require('./routes/assignmentRoutes');
 const healthzCheck = require('./routes/healthCheckRoutes');
+const helper = require('./utils/helper');
 const app = express();
 
 const { sequelize } = require('./Database/postgres');
@@ -29,7 +30,8 @@ if (!res) {
 app.use('/v1/assignments', assignment);
 //API ENDPOINTS FOR healthz
 app.use('/healthz', healthzCheck);
-app.patch('/*', (req, res) => {
+app.patch('/*', (req, res) => { 
+  helper.logger.info('Method Not Allowed');
   return res.status(405).json({
     message: 'Method Not Allowed',
   });
@@ -49,4 +51,12 @@ app.delete('/*', (req, res) => {
 
 app.listen(listen_Port, () => {
   console.log(`Listening to port ${listen_Port}`);
+});
+
+process.on('terminate', () => {
+  process.on('terminate', () => {
+   
+    helper.logger.info('Server Terminate');
+    helper.statsdClient.socket.close(); 
+   });
 });

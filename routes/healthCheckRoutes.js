@@ -17,15 +17,19 @@ router.get('/', async (req, res) => {
   res.removeHeader('Keep-Alive');
 
   // Check for the presence of the Authorization header
-  if (req.headers.authorization) {
-    res.status(400).json({
-      message: 'Authorization header not required available for all users',
-    });
-  } else if (queryParams.length > 0 || queryBody.length > 0) {
+  if (queryParams.length > 0 || queryBody.length > 0) {
+    helper.logger.error(
+      'GET-healthz -Invalid Request contains queryString. - '
+    );
     res.status(400).end();
   } else if (dbConnection) {
+    helper.logger.info('GET-healthz - DB Health Check Success.');
+    helper.statsdClient.increment('healthz_counter');
+ 
     res.status(200).end();
   } else if (!dbConnection) {
+    helper.logger.info('GET-healthz - DB Health Check Fail.');
+    helper.statsdClient.increment('healthz_fail_counter');
     res.status(503).end();
   }
 });

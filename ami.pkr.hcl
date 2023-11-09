@@ -58,7 +58,7 @@ variable "ami_users" {
 
 # https://www.packer.io/plugins/builders/amazon/ebs
 source "amazon-ebs" "webapp" {
-  ami_name              = "csye6225_${formatdate("YYYY_MM_DD_hh_mm_ss", timestamp())}"
+  ami_name              = "${var.name}_${formatdate("YYYY_MM_DD_hh_mm_ss", timestamp())}"
   ami_description       = "AMI for CSYE 6225"
   region                = "${var.region}"
   ami_users             = "${var.ami_users}"
@@ -94,6 +94,16 @@ build {
   provisioner "file" {
     source      = "webapp.zip"
     destination = "/home/admin/webapp.zip"
+  }
+
+  provisioner "file" {
+    source      = "webapp.service"
+    destination = "/home/admin/webapp.service"
+  }
+
+  provisioner "file" {
+    source      = "cloudwatch-config.json"
+    destination = "/home/admin/cloudwatch-config.json"
   }
 
   provisioner "shell" {

@@ -22,7 +22,7 @@ The entire Application has 6 API EndPoints.
 
 1.Visual studio code (IDE)
 2.POSTMAN
-3.Database - Postgres
+3.GIT
 4.Node.js
 
 ## Responds with following HTTP messages
@@ -44,3 +44,45 @@ The entire Application has 6 API EndPoints.
 Test the api
 
 Please create a pull request with a detailed description of changes.
+
+
+## Overview
+
+This project utilizes GitHub Actions and Packer to streamline the deployment of a web application environment. It combines automation workflows with shell scripting and systemd configuration to build application artifacts through GitHub Actions and create an Amazon Machine Image (AMI) using Packer.
+
+## GitHub Actions Workflows
+
+### 1. Integration Test
+
+### 2. Packer Fmt and Validate Test
+
+### 3. Integration Test and Build the Artifacts
+
+
+## Packer AMI Build
+
+- The Packer component is used to build an Amazon Machine Image (AMI) with the application artifact.
+- The built AMI automatically starts the application using systemd, ensuring smooth deployment.
+
+## Shell Script
+
+### Purpose
+
+This Bash script automates the setup and configuration of essential components for a web application, including:
+
+- Installing required software packages
+- Setting up the CloudWatch agent
+- Managing user permissions and groups
+- Configuring systemd for application management
+
+### Permissions
+
+The script enforces the following permissions:
+
+- Ownership of the web application directory is given to the user 'pramod' and group 'pramodgroup.'
+- The 'pramod' user is restricted from login access.
+- Other users are denied access to the /opt/pramodhome/webapp directory, enhancing security.
+
+### Logging
+
+The script creates log files, manages permissions for log directories, and starts the web application service. Rsyslog is also installed to facilitate auditing and monitoring of system activities.
