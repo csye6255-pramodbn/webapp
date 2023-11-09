@@ -10,7 +10,7 @@ const { Account } = require('../Models/association');
 const logger = winston.createLogger({
   format: winston.format.json(),
   transports: [
-    new winston.transports.File({ filename: '/var/log/webapp/csye6225.log' }),
+    new winston.transports.File({ filename: '/var/log/csye6225.log' }),
   ],
 });
  
