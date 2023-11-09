@@ -42,10 +42,9 @@ sudo unzip webapp.zip
 sudo rm webapp.zip
 
 # Creating log file
-sudo mkdir /var/log/webapp
-sudo touch /var/log/webapp/csye6225.log
-sudo chown -R pramod:pramodgroup /var/log/webapp
-sudo chmod 750 /var/log/webapp/csye6225.log
+sudo touch /var/log/csye6225.log
+sudo chown -R pramod:pramodgroup /var/log/csye6225.log
+sudo chmod 750 /var/log/csye6225.log
 
 # Installing node modules
 sudo mv /opt/pramodhome/webapp/users.csv /opt/
