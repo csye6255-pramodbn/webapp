@@ -16,7 +16,8 @@ The entire Application has 6 API EndPoints.
 3.  GET--/v1/assignments/{id}xs
 4.  DELETE--/v1/assignments/{id}
 5.  PUT--/v1/assignments/{id}
-6.  GET--/healthz
+6.  POST--/v1/assignments/{id}/submission
+7.  GET--/healthz
 
 ## Prerequisites
 
