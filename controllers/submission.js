@@ -151,7 +151,7 @@ const createNewSubmission = async (req, res) => {
  
     // Set the region
  
-    AWS.config.update({ region: process.env.REGION });
+    AWS.config.update({ region: process.env.SNS_REGION });
  
     // Create an SNS service object
  
