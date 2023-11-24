@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../Database/postgres');
-
+ 
 // Define the Account model
 const Account = sequelize.define(
   'Account',
@@ -21,7 +21,7 @@ const Account = sequelize.define(
     freezeTableName: true,
   }
 );
-
+ 
 // Define the Assignment model
 const Assignment = sequelize.define(
   'Assignment',
@@ -42,9 +42,32 @@ const Assignment = sequelize.define(
     freezeTableName: true,
   }
 );
-
+ 
+//Define Submission Model
+const Submission = sequelize.define(
+  'Submission',
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    assignment_id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      allowNull: false,
+    },
+    submission_url: { type: DataTypes.STRING, allowNull: false },
+  },
+  {
+    createdAt: 'submission_date',
+    updatedAt: 'submission_updated',
+    freezeTableName: true,
+  }
+);
+ 
 // Define the association between Account and Assignment
 Account.hasMany(Assignment, { foreignKey: 'accountId' });
 Assignment.belongsTo(Account, { foreignKey: 'accountId' });
-
-module.exports = { Account, Assignment };
+ 
+module.exports = { Account, Assignment, Submission };
