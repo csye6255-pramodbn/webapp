@@ -2,7 +2,8 @@ const { Account, Assignment, Submission } = require('../Models/association');
 const helper = require('../utils/helper');
  
 const { validUserId, getDecryptedCreds, isUUIDv4 } = require('../utils/helper');
-//const region = process.env.REGION;
+const snsRegion = process.env.REGION;
+const snsTopicArn = process.env.TOPICARN;
 const createNewSubmission = async (req, res) => {
   helper.logger.info('POST - Assignment Submission'); //LOG DATA
   helper.statsdClient.increment('POST_assignmentSubmission'); //METRIC DATA
@@ -33,6 +34,26 @@ const createNewSubmission = async (req, res) => {
         'Bad request-Required submission url missing or it is not String in body Parameters',
     });
   }
+ 
+  // Validate if submission_url is a valid URL using axios.head
+  // 3. url validator
+  /*try {
+    const response = await axios.head(req.body.submission_url);
+ 
+    // Assuming a successful HTTP HEAD request means the URL is valid and accessible
+    if (response.status === 200) {
+      console.log('valid submission URL');
+    } else {
+      helper.logger.error('Invalid submission URL');
+      return res.status(400).json({ error: 'Invalid submission URL' });
+    }
+  } catch (error) {
+    helper.logger.error('Invalid submission URL or unable to access');
+    return res
+      .status(400)
+      .json({ error: 'Invalid submission URL or unable to access' });
+  }*/
+ 
   //Validation for Unwanted Fields
   const allowedFields = ['submission_url'];
   const requestKeys = Object.keys(req.body);
@@ -91,11 +112,11 @@ const createNewSubmission = async (req, res) => {
     } else if (existingAssignment) {
       let { userName } = getDecryptedCreds(req.headers.authorization);
       //console.log('Email of User' + ' ' + userName);
-      let idValue = await validUserId(userName);
-      let ownerCheck = existingAssignment.accountId;
+      //let idValue = await validUserId(userName);
+      //let ownerCheck = existingAssignment.accountId;
       let assignDeadline = existingAssignment.deadline;
       const currentDate = new Date();
-      if (ownerCheck !== idValue) {
+      /*if (ownerCheck !== idValue) {
         helper.logger.error(
           'Forbidden-Assignment belongs to another User-Check(s) failed. - ',
           req.params.id
@@ -103,7 +124,7 @@ const createNewSubmission = async (req, res) => {
         return res.status(403).json({
           message: 'Forbidden-Assignment belongs to another User',
         });
-      }
+      }*/
  
       if (currentDate > new Date(assignDeadline)) {
         // Submission Deadline has passed
@@ -146,16 +167,23 @@ const createNewSubmission = async (req, res) => {
     });
  
     const accountDetails = assignment.Account;
+    //console.log('Account ID:', accountDetails.id);
+    //console.log('First Name:', accountDetails.first_name);
+    //console.log('Email:', accountDetails.email);
+ 
+    // Import the AWS SDK
  
     const AWS = require('aws-sdk');
  
     // Set the region
  
-    AWS.config.update({ region: process.env.SNS_REGION });
+    AWS.config.update({ region: snsRegion });
  
     // Create an SNS service object
  
     const sns = new AWS.SNS({ apiVersion: '2010-03-31' });
+ 
+    // Write the logic to get the data from the body <name>, <email>, <url>
  
     // JSON message to publish
  
@@ -170,7 +198,7 @@ const createNewSubmission = async (req, res) => {
     // Params for publishing to SNS topic
  
     const params = {
-      TopicArn: process.env.TOPIC_ARN,
+      TopicArn: snsTopicArn,
  
       Message: JSON.stringify(message),
     };
