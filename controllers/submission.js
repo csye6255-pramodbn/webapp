@@ -1,15 +1,16 @@
 const { Account, Assignment, Submission } = require('../Models/association');
 const helper = require('../utils/helper');
- 
+const path = require('path');
+
 const { validUserId, getDecryptedCreds, isUUIDv4 } = require('../utils/helper');
-const snsRegion = process.env.REGION;
-const snsTopicArn = process.env.TOPICARN;
+const snsRegion = process.env.SNS_REGION;
+const snsTopicArn = process.env.TOPIC_ARN;
 const createNewSubmission = async (req, res) => {
   helper.logger.info('POST - Assignment Submission'); //LOG DATA
   helper.statsdClient.increment('POST_assignmentSubmission'); //METRIC DATA
- 
+
   // Validation 3: Check data types and value ranges
- 
+
   //Validation1 for JSON
   if (typeof req.body !== 'object') {
     helper.logger.error(
@@ -21,7 +22,7 @@ const createNewSubmission = async (req, res) => {
       message: 'Bad request: Request body must be a JSON object',
     });
   }
- 
+
   // Validation 2: Check if required fields are missing in the request body
   if (!req.body.submission_url || typeof req.body.submission_url !== 'string') {
     //console.log('Invalid input');
@@ -34,35 +35,44 @@ const createNewSubmission = async (req, res) => {
         'Bad request-Required submission url missing or it is not String in body Parameters',
     });
   }
- 
-  // Validate if submission_url is a valid URL using axios.head
+
+
+  // Validate if submission_url is a valid URL
   // 3. url validator
-  /*try {
-    const response = await axios.head(req.body.submission_url);
- 
-    // Assuming a successful HTTP HEAD request means the URL is valid and accessible
-    if (response.status === 200) {
-      console.log('valid submission URL');
-    } else {
-      helper.logger.error('Invalid submission URL');
-      return res.status(400).json({ error: 'Invalid submission URL' });
-    }
-  } catch (error) {
-    helper.logger.error('Invalid submission URL or unable to access');
+  // Define regular expressions for validation
+  const urlPattern = /^(http|https):\/\/.*$/;
+  const zipExtensionPattern = /\.zip$/;
+
+
+  // Check if the URL starts with "http" or "https"
+  if (!urlPattern.test(req.body.submission_url)) {
+    helper.logger.error('Invalid URL format.', req.body.submission_url);
+    return res.status(400).json({ message: 'Invalid URL format.' });
+  }
+
+
+  // Check if the URL ends with ".zip"
+  const fileExtension = path.extname(req.body.submission_url);
+  if (!zipExtensionPattern.test(fileExtension.toLowerCase())) {
+    helper.logger.error(
+      'The URL does not have a .zip extension.',
+      req.body.submission_url
+    );
     return res
       .status(400)
-      .json({ error: 'Invalid submission URL or unable to access' });
-  }*/
- 
+      .json({ error: 'The URL does not have a .zip extension.' });
+  }
+
+
   //Validation for Unwanted Fields
   const allowedFields = ['submission_url'];
   const requestKeys = Object.keys(req.body);
- 
+
   // Check if any unwanted fields are present in the request body
   const unwantedFields = requestKeys.filter(
     (key) => !allowedFields.includes(key)
   );
- 
+
   if (unwantedFields.length > 0) {
     helper.logger.error(
       'Bad request - Unwanted fields in request body-Validation Check(s) failed. - ',
@@ -84,7 +94,7 @@ const createNewSubmission = async (req, res) => {
       message: 'Bad request - Query String not Allowed',
     });
   }
- 
+
   let id = req.params.id;
   const idCheck = isUUIDv4(id);
   if (!idCheck) {
@@ -96,7 +106,7 @@ const createNewSubmission = async (req, res) => {
       message: 'Bad request- Assignment Id is Incorrect',
     });
   }
- 
+
   try {
     // Check if the Assignment with the given ID exists
     const existingAssignment = await Assignment.findByPk(id);
@@ -110,22 +120,10 @@ const createNewSubmission = async (req, res) => {
         message: 'Bad Request-Assignment not found',
       });
     } else if (existingAssignment) {
-      let { userName } = getDecryptedCreds(req.headers.authorization);
-      //console.log('Email of User' + ' ' + userName);
-      //let idValue = await validUserId(userName);
-      //let ownerCheck = existingAssignment.accountId;
       let assignDeadline = existingAssignment.deadline;
       const currentDate = new Date();
-      /*if (ownerCheck !== idValue) {
-        helper.logger.error(
-          'Forbidden-Assignment belongs to another User-Check(s) failed. - ',
-          req.params.id
-        );
-        return res.status(403).json({
-          message: 'Forbidden-Assignment belongs to another User',
-        });
-      }*/
- 
+
+
       if (currentDate > new Date(assignDeadline)) {
         // Submission Deadline has passed
         helper.logger.error(
@@ -137,7 +135,7 @@ const createNewSubmission = async (req, res) => {
         });
       }
     }
- 
+
     const submissionCount = await Submission.count({
       where: {
         assignment_id: id,
@@ -145,7 +143,7 @@ const createNewSubmission = async (req, res) => {
     });
     if (submissionCount >= noOfAttempts) {
       helper.logger.error(
-        'Bad-request-Assignment Submission attempts exceeded. - ',
+ 'Bad-request-Assignment Submission attempts exceeded. - ',
         req.params.id
       );
       return res.status(400).json({
@@ -153,58 +151,55 @@ const createNewSubmission = async (req, res) => {
       });
     }
     helper.logger.info('Validation Checks Passed');
- 
+
     let newAssignmentSubmission = {
       assignment_id: id,
       submission_url: req.body.submission_url,
     };
     let newSubmission = await Submission.create(newAssignmentSubmission);
-    const assignment = await Assignment.findByPk(id, {
-      include: {
-        model: Account,
-        attributes: ['first_name', 'email'],
-      },
+    let { userName } = getDecryptedCreds(req.headers.authorization);
+
+
+    const account = await Account.findOne({
+      where: { email: userName },
+      attributes: ['first_name'], // Only fetch the 'firstName' attribute
     });
- 
-    const accountDetails = assignment.Account;
-    //console.log('Account ID:', accountDetails.id);
-    //console.log('First Name:', accountDetails.first_name);
-    //console.log('Email:', accountDetails.email);
- 
+
+    // Check if the account exists
+    let userFirstName = '';
+    if (account) {
+      // Access the first name from the retrieved account
+      const firstName = account.getDataValue('first_name');
+      userFirstName = firstName;
+    }
     // Import the AWS SDK
- 
     const AWS = require('aws-sdk');
- 
     // Set the region
- 
     AWS.config.update({ region: snsRegion });
- 
+
     // Create an SNS service object
- 
     const sns = new AWS.SNS({ apiVersion: '2010-03-31' });
- 
-    // Write the logic to get the data from the body <name>, <email>, <url>
- 
+
+    // Write the logic to get the data from the body and Basic Auth <name>, <email>, <url>
     // JSON message to publish
- 
     const message = {
-      name: accountDetails.first_name,
- 
-      email: accountDetails.email,
- 
+      name: userFirstName,
+
+
+      email: userName,
+
+
       url: req.body.submission_url,
     };
- 
+
     // Params for publishing to SNS topic
- 
     const params = {
       TopicArn: snsTopicArn,
- 
+
       Message: JSON.stringify(message),
     };
- 
+
     // Publish the message
- 
     sns.publish(params, (err, data) => {
       if (err) {
         console.error(err, err.stack);
@@ -212,8 +207,7 @@ const createNewSubmission = async (req, res) => {
         console.log('Message published');
       }
     });
- 
-    let result = {
+ let result = {
       id: newSubmission.id,
       assignment_id: newSubmission.assignment_id,
       submission_url: newSubmission.submission_url,
@@ -227,7 +221,7 @@ const createNewSubmission = async (req, res) => {
     return res.status(400).json({ message: 'Bad Request' });
   }
 };
- 
+
 module.exports = {
   createNewSubmission,
 };
