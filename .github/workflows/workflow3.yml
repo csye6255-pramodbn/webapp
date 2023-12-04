@@ -70,12 +70,12 @@ jobs:
       - name: Check zip
         run: ls -l
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Dev Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_DEV_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_DEV_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_DEV_REGION }}
 
       - name: Setup 'packer'
         uses: hashicorp/setup-packer@main
@@ -91,4 +91,39 @@ jobs:
         id: packer_build
         run: |
           echo "Running packer build"
-          packer build ami.pkr.hcl
+          packer build ami.pkr.hcl | sudo tee output.txt; tail -2 output.txt | head -2 | awk 'match($0, /ami-.*/) { print substr($0, RSTART, RLENGTH) }' >> ami.txt
+          
+      - name: Configure AWS Demo Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_DEMO_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_DEMO_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_DEMO_REGION }}
+
+      - name: Create new launch template
+        if: ${{ github.event.pull_request.merged == true }}
+        run: cat ami.txt | while read file; do aws ec2 create-launch-template-version --launch-template-name asg_launch_config --version-description latest --source-version 1 --launch-template-data "ImageId=$file"; done
+      
+      - name: Update the autoscaling group  
+        run: aws autoscaling update-auto-scaling-group --auto-scaling-group-name $(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[?starts_with(AutoScalingGroupName,'terraform-')].AutoScalingGroupName" --output text) --launch-template LaunchTemplateName=asg_launch_config,Version='$Latest'
+      
+      - name: Instance refresh
+        id: refresh
+        run: | 
+          refresh_id=$(aws autoscaling start-instance-refresh --auto-scaling-group-name MY-ASG --query 'InstanceRefreshId' --output text)
+          echo "Refresh ID: ${refresh_id}" >> output.txt
+      
+      - name: Wait for refresh to complete
+        run: |
+         status="IN_PROGRESS"
+         while [ "$status" = "IN_PROGRESS" ]; do
+           status=$(aws autoscaling describe-instance-refreshes --instance-refresh-ids ${{steps.refresh.outputs.refresh_id}} --query 'InstanceRefreshes[0].Status' --output text)
+           echo "Status: $status"   
+           if [ "$status" != "IN_PROGRESS" ]; then
+             echo "Refresh finished with status $status"
+             exit 0 
+           fi  
+           sleep 30
+         done   
+         echo "Error waiting for refresh"
+         exit 1
