@@ -116,20 +116,20 @@ jobs:
           latestAmi=$(aws ec2 describe-images --filters "Name=owner-id,Values=${{ vars.AWS_DEV_ACC_ID }}" --query "sort_by(Images, &CreationDate)[-1].[ImageId]" --output "text")
           echo "latest AMI:"
           echo $latestAmi
-          aws ec2 create-launch-template-version --launch-template-name ${{ vars.launch_template_name }} --launch-template-data "ImageId=$latestAmi" --source-version 1
+          aws ec2 create-launch-template-version --launch-template-name ${{ vars.LAUNCH_TEMPLATE_NAME }} --launch-template-data "ImageId=$latestAmi" --source-version 1
         env:
           AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
  
       - name: Instance Refresh
         run: |
-          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ vars.auto_scaling_group_name }} --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' --desired-configuration '{"LaunchTemplate":{"LaunchTemplateName": "${{ vars.launch_template_name }}" , "Version": "$Latest"}}'
+          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' --desired-configuration '{"LaunchTemplate":{"LaunchTemplateName": "${{ vars.LAUNCH_TEMPLATE_NAME }}" , "Version": "$Latest"}}'
         env:
           AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
  
       - name: Wait for Instance Refresh to Complete
         run: |
           while true; do
-            refreshStatus=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name ${{ vars.auto_scaling_group_name }} --query 'InstanceRefreshes[0].Status' --output text)
+            refreshStatus=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} --query 'InstanceRefreshes[0].Status' --output text)
             if [ "$refreshStatus" = "Successful" ]; then
               echo "Instance Refresh completed successfully!"
               break
