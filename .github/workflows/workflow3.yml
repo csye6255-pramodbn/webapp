@@ -124,7 +124,7 @@ jobs:
         run: |
           aws autoscaling start-instance-refresh --auto-scaling-group-name csye6225Asg --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' --desired-configuration '{"LaunchTemplate":{"LaunchTemplateName": "launchEc2" , "Version": "$Latest"}}'
         env:
-          AWS_REGION: us-east-1
+          AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
  
       - name: Wait for Instance Refresh to Complete
         run: |
