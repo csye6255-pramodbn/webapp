@@ -121,36 +121,25 @@ jobs:
           AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
  
       - name: Instance Refresh
-        run: | 
-            aws autoscaling start-instance-refresh \
-              --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} \
-              --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' \
-              --desired-configuration '{
-                    "LaunchTemplate": {
-                      "LaunchTemplateName": "${{ vars.LAUNCH_TEMPLATE_NAME }}",
-                      "Version": "$Latest"
-                    }
-                  }'
-        env: 
-            AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
-
+        run: |
+          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' --desired-configuration '{"LaunchTemplate":{"LaunchTemplateName": "${{ vars.LAUNCH_TEMPLATE_NAME }}" , "Version": "$Latest"}}'
+        env:
+          AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
+ 
       - name: Wait for Instance Refresh to Complete
         run: |
-            while [[ true ]]; do
-              status=$(aws autoscaling describe-instance-refreshes \
-                --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} \ 
-                --query 'InstanceRefreshes[0].Status' --output text)
-        
-              if [[ "$status" == "Successful" ]]; then
-                echo "Instance Refresh completed successfully!"
-                break
-              elif [[ "$status" == "Failed" || "$status" == "Cancelled" ]]; then
-                echo "Instance Refresh Failed or Cancelled!!"
-                exit 1  
-              else
-                echo "Waiting for Instance Refresh to complete..."   
-                sleep 60
-              fi
-            done
+          while true; do
+            refreshStatus=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} --query 'InstanceRefreshes[0].Status' --output text)
+            if [ "$refreshStatus" = "Successful" ]; then
+              echo "Instance Refresh completed successfully!"
+              break
+            elif [ "$refreshStatus" = "Failed" ]; then
+              echo "Instance Refresh failed!"
+              exit 1
+            else
+              echo "Waiting for Instance Refresh to complete..."
+              sleep 60
+            fi
+          done
         env:
-            AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
+          AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
