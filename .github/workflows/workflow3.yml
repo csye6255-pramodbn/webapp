@@ -133,6 +133,7 @@ jobs:
             if [ "$refreshStatus" == "Successful" ]; then
               echo "Instance Refresh completed successfully!"
               break
+
             elif [ "$refreshStatus" == "Failed" || $refreshStatus" == "Cancelled" ]; then
               echo "Instance Refresh Failed or Cancelled !!"
               exit 1

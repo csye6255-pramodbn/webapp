@@ -27,7 +27,7 @@ if (!res) {
 }
 
 //API FOR ASSIGNMENTS
-app.use('/v1/assignments', assignment);
+app.use('/demo/assignments', assignment);
 //API ENDPOINTS FOR healthz
 app.use('/healthz', healthzCheck);
 app.patch('/*', (req, res) => { 
