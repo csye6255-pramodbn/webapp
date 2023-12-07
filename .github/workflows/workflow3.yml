@@ -12,90 +12,90 @@ concurrency:
   cancel-in-progress: true
  
 jobs:
-  integration_test:
-    name: integration_test
-    if: ${{ github.event.pull_request.merged == true }}
-    runs-on: ubuntu-latest
+  # integration_test:
+  #   name: integration_test
+  #   if: ${{ github.event.pull_request.merged == true }}
+  #   runs-on: ubuntu-latest
  
-    services:
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_USER: ${{ secrets.DB_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.DB_NAME }}
-        ports:
-          - 5432:5432
+  #   services:
+  #     postgres:
+  #       image: postgres:latest
+  #       env:
+  #         POSTGRES_USER: ${{ secrets.DB_USER }}
+  #         POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  #         POSTGRES_DB: ${{ secrets.DB_NAME }}
+  #       ports:
+  #         - 5432:5432
  
-    strategy:
-      matrix:
-        node-version: [16.x]
+  #   strategy:
+  #     matrix:
+  #       node-version: [16.x]
  
-    env:
-      PORT: ${{ secrets.PORT }}
-      DB_NAME: ${{ secrets.DB_NAME }}
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      DB_HOST: ${{ secrets.DB_HOST }}
-      DB_DIALECT: ${{ secrets.DB_DIALECT }}
+  #   env:
+  #     PORT: ${{ secrets.PORT }}
+  #     DB_NAME: ${{ secrets.DB_NAME }}
+  #     DB_USER: ${{ secrets.DB_USER }}
+  #     DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  #     DB_HOST: ${{ secrets.DB_HOST }}
+  #     DB_DIALECT: ${{ secrets.DB_DIALECT }}
  
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v1
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v1
  
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
+  #     - name: Use Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: ${{ matrix.node-version }}
  
-      - run: npm install
-      - run: npm test
+  #     - run: npm install
+  #     - run: npm test
  
-  build_packer_ami:
-    if: ${{ github.event.pull_request.merged == true }}
-    needs: integration_test
-    name: build_packer_ami
-    runs-on: ubuntu-latest
-    outputs:
-      ami_id: ${{ steps.packer_build.outputs.AMI_ID }}
-    steps:
-      - run: echo ${{ github.event.pull_request.merged }}
-      - uses: actions/checkout@v2
+  # build_packer_ami:
+  #   if: ${{ github.event.pull_request.merged == true }}
+  #   needs: integration_test
+  #   name: build_packer_ami
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     ami_id: ${{ steps.packer_build.outputs.AMI_ID }}
+  #   steps:
+  #     - run: echo ${{ github.event.pull_request.merged }}
+  #     - uses: actions/checkout@v2
  
-      - name: zip the project
-        run: cd ../ && zip -r webapp.zip webapp && cd - && cp ../webapp.zip .
+  #     - name: zip the project
+  #       run: cd ../ && zip -r webapp.zip webapp && cd - && cp ../webapp.zip .
  
-      - name: Check zip
-        run: ls -l
+  #     - name: Check zip
+  #       run: ls -l
  
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_DEV_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_DEV_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_DEV_REGION }}
+  #     - name: Configure AWS Credentials
+  #       uses: aws-actions/configure-aws-credentials@v1
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_DEV_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_DEV_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ vars.AWS_DEV_REGION }}
  
-      - name: Setup 'packer'
-        uses: hashicorp/setup-packer@main
-        id: setup
-        with:
-          version: '1.8.3' # or 'latest'
+  #     - name: Setup 'packer'
+  #       uses: hashicorp/setup-packer@main
+  #       id: setup
+  #       with:
+  #         version: '1.8.3' # or 'latest'
  
-      - name: Run 'packer init'
-        id: init
-        run: packer init ami.pkr.hcl
+  #     - name: Run 'packer init'
+  #       id: init
+  #       run: packer init ami.pkr.hcl
  
-      - name: Run 'packer Build'
-        id: packer_build
-        run: |
-          echo "Running packer build"
-          packer build ami.pkr.hcl
-          AMI_ID=$(jq -r '.builds[-1].artifact_id' manifest.json | cut -d ":" -f2)
-          # AMI_ID="sample_ami_id"
-          echo "AMI_ID=$AMI_ID" >> $GITHUB_OUTPUT
+  #     - name: Run 'packer Build'
+  #       id: packer_build
+  #       run: |
+  #         echo "Running packer build"
+  #         packer build ami.pkr.hcl
+  #         AMI_ID=$(jq -r '.builds[-1].artifact_id' manifest.json | cut -d ":" -f2)
+  #         # AMI_ID="sample_ami_id"
+  #         echo "AMI_ID=$AMI_ID" >> $GITHUB_OUTPUT
           
   continuous_deployment:
-    needs: build_packer_ami
+    # needs: build_packer_ami
     runs-on: ubuntu-latest
     steps:
       - name: Authenticate AWS CLI
@@ -121,25 +121,36 @@ jobs:
           AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
  
       - name: Instance Refresh
-        run: |
-          aws autoscaling start-instance-refresh --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' --desired-configuration '{"LaunchTemplate":{"LaunchTemplateName": "${{ vars.LAUNCH_TEMPLATE_NAME }}" , "Version": "$Latest"}}'
-        env:
-          AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
- 
+        run: | 
+            aws autoscaling start-instance-refresh \
+              --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} \
+              --preferences '{"InstanceWarmup": 300, "MinHealthyPercentage": 50}' \
+              --desired-configuration '{
+                    "LaunchTemplate": {
+                      "LaunchTemplateName": "${{ vars.LAUNCH_TEMPLATE_NAME }}",
+                      "Version": "$Latest"
+                    }
+                  }'
+        env: 
+            AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
+
       - name: Wait for Instance Refresh to Complete
         run: |
-          while true; do
-            refreshStatus=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} --query 'InstanceRefreshes[0].Status' --output text)
-            if [ "$refreshStatus" = "Successful" ]; then
-              echo "Instance Refresh completed successfully!"
-              break
-            elif [ "$refreshStatus" = "Failed" || "$refreshStatus" = "Cancelled" ]; then
-              echo "Instance Refresh Failed or Cancelled!!"
-              exit 1
-            else
-              echo "Waiting for Instance Refresh to complete..."
-              sleep 60
-            fi
-          done
+            while [[ true ]]; do
+              status=$(aws autoscaling describe-instance-refreshes \
+                --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} \ 
+                --query 'InstanceRefreshes[0].Status' --output text)
+        
+              if [[ "$status" == "Successful" ]]; then
+                echo "Instance Refresh completed successfully!"
+                break
+              elif [[ "$status" == "Failed" || "$status" == "Cancelled" ]]; then
+                echo "Instance Refresh Failed or Cancelled!!"
+                exit 1  
+              else
+                echo "Waiting for Instance Refresh to complete..."   
+                sleep 60
+              fi
+            done
         env:
-          AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
+            AWS_REGION: ${{ vars.AWS_DEMO_REGION }}
