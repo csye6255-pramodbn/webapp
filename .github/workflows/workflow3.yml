@@ -130,10 +130,10 @@ jobs:
         run: |
           while true; do
             refreshStatus=$(aws autoscaling describe-instance-refreshes --auto-scaling-group-name ${{ vars.AUTO_SCALING_GROUP_NAME }} --query 'InstanceRefreshes[0].Status' --output text)
-            if [ "$refreshStatus" == "Successful" ]; then
+            if [ "$refreshStatus" = "Successful" ]; then
               echo "Instance Refresh completed successfully!"
               break
-            elif [ "$refreshStatus" == "Failed" || "$refreshStatus" == "Cancelled" ]; then
+            elif [ "$refreshStatus" = "Failed" || "$refreshStatus" = "Cancelled" ]; then
               echo "Instance Refresh Failed or Cancelled!!"
               exit 1
             else
